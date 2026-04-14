@@ -1,0 +1,25 @@
+# Project TODO
+
+- [x] Basic full-screen MapLibre GL map with state boundaries
+- [x] Glass-morphism Command Center UI design
+- [x] Audience filters (age, sex, occupation, education, state, sample size)
+- [x] Question bar with suggestion pills
+- [x] Template-based simulation engine
+- [x] Sentiment analysis with animated bars
+- [x] State choropleth coloring
+- [x] Click-to-filter states on map
+- [x] Query history panel
+- [x] Expandable persona cards with full profiles
+- [x] Loading screen with tactical HUD aesthetic
+- [x] Upgrade to full-stack with server/db/user capabilities
+- [x] Resolve merge conflicts from full-stack upgrade (Home.tsx, package.json)
+- [x] Redesign UI to Liquid Glass aesthetic with semi-transparent frosted panels
+- [x] Improve map visuals (nicer colors, glow effects, better state boundaries)
+- [x] Update all HUD panels to liquid glass style with backdrop-blur and gradient borders
+- [x] Build tRPC backend route for LLM-powered persona response generation
+- [x] Create batch prompt system that sends persona profiles + question to LLM
+- [x] Implement think → draft → deliver flow with streaming reveal in UI
+- [x] Update frontend to call backend API instead of local simulation
+- [x] Add loading states showing "Thinking..." → "Drafting responses..." → "Delivering results"
+- [x] Write vitest tests for the LLM endpoint (9 tests passing)
+- [x] End-to-end testing of real-time response generation

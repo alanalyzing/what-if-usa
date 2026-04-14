@@ -1,37 +1,43 @@
 /**
- * DESIGN: Tactical Command Center — Glass-morphism HUD panel
- * Floating glass panel with micro-grid dot pattern, corner brackets, optional scan line
+ * DESIGN: Liquid Glass — Frosted translucent panel
+ * Semi-transparent with specular highlights, soft blur, and subtle glow
  */
 
 import { cn } from "@/lib/utils";
 import { motion, type HTMLMotionProps } from "framer-motion";
 
 interface GlassPanelProps extends HTMLMotionProps<"div"> {
+  variant?: "default" | "subtle" | "glow";
   corners?: boolean;
   scanLine?: boolean;
-  glow?: boolean;
   className?: string;
   children: React.ReactNode;
 }
 
 export default function GlassPanel({
-  corners = true,
+  variant = "default",
+  corners = false,
   scanLine = false,
-  glow = false,
   className,
   children,
   ...motionProps
 }: GlassPanelProps) {
+  const variantClass = {
+    default: "liquid-glass",
+    subtle: "liquid-glass-subtle",
+    glow: "liquid-glass-glow",
+  }[variant];
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
+      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
       className={cn(
-        "glass-panel rounded-lg overflow-hidden",
+        variantClass,
+        "overflow-hidden",
         corners && "hud-corners",
         scanLine && "scan-line",
-        glow && "glow-cyan",
         className,
       )}
       {...motionProps}

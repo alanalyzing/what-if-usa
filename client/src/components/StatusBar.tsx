@@ -1,11 +1,11 @@
 /**
- * DESIGN: Tactical Command Center — Top Status Bar / Title
+ * DESIGN: Liquid Glass — Top Status Bar
  * Centered top bar with app title and status indicators
  */
 
 import { useApp } from "@/contexts/AppContext";
 import { STATE_NAMES } from "@/lib/types";
-import { Database, MapPin, Radio } from "lucide-react";
+import { Database, MapPin, Sparkles } from "lucide-react";
 
 export default function StatusBar() {
   const { personas, selectedState, isLoading } = useApp();
@@ -13,36 +13,38 @@ export default function StatusBar() {
   if (isLoading) return null;
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4">
-      {/* Title */}
-      <div className="glass-panel hud-corners rounded-lg px-5 py-2.5 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-[#00F0FF] rounded-full animate-pulse" style={{ boxShadow: "0 0 8px #00F0FF" }} />
-          <h1 className="font-display text-sm font-bold text-[#00F0FF] tracking-[0.15em] uppercase glow-text-cyan">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3">
+      <div className="liquid-glass rounded-2xl px-5 py-2.5 flex items-center gap-4">
+        <div className="flex items-center gap-2.5">
+          <div className="relative">
+            <div className="w-2 h-2 bg-cyan-400 rounded-full" style={{ boxShadow: "0 0 8px rgba(0, 200, 255, 0.5)" }} />
+            <div className="absolute inset-0 w-2 h-2 bg-cyan-400 rounded-full animate-ping opacity-30" />
+          </div>
+          <h1 className="font-display text-sm font-bold tracking-[0.12em] uppercase bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">
             What If USA
           </h1>
         </div>
 
-        <div className="w-px h-5 bg-white/10" />
+        <div className="w-px h-5 bg-white/8" />
 
-        <div className="flex items-center gap-3 text-[10px] font-display text-white/40 tracking-wider uppercase">
-          <span className="flex items-center gap-1">
-            <Database size={10} className="text-[#00F0FF]/40" />
+        <div className="flex items-center gap-3 text-[10px] font-display text-white/35 tracking-wider uppercase">
+          <span className="flex items-center gap-1.5">
+            <Database size={10} className="text-cyan-400/40" />
             {personas.length.toLocaleString()} personas
           </span>
           {selectedState && (
             <>
-              <div className="w-px h-3 bg-white/10" />
-              <span className="flex items-center gap-1 text-[#00F0FF]">
+              <div className="w-px h-3 bg-white/8" />
+              <span className="flex items-center gap-1.5 text-cyan-300/80">
                 <MapPin size={10} />
                 {STATE_NAMES[selectedState] || selectedState}
               </span>
             </>
           )}
-          <div className="w-px h-3 bg-white/10" />
-          <span className="flex items-center gap-1">
-            <Radio size={10} className="text-[#00FF88]" />
-            <span className="text-[#00FF88]">LIVE</span>
+          <div className="w-px h-3 bg-white/8" />
+          <span className="flex items-center gap-1.5">
+            <Sparkles size={10} className="text-emerald-400/60" />
+            <span className="text-emerald-400/70">AI-Powered</span>
           </span>
         </div>
       </div>

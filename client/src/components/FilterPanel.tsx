@@ -1,12 +1,12 @@
 /**
- * DESIGN: Tactical Command Center — Audience Filter Panel
+ * DESIGN: Liquid Glass — Audience Filter Panel
  * Top-left collapsible glass panel with age slider, sex, occupation, education, state, sample size
  */
 
 import { useApp } from "@/contexts/AppContext";
 import GlassPanel from "./GlassPanel";
 import { STATE_NAMES, EDUCATION_LABELS } from "@/lib/types";
-import { ChevronDown, ChevronUp, Filter, Users, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, Users, RotateCcw } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useState, useMemo } from "react";
 
@@ -41,30 +41,30 @@ export default function FilterPanel() {
   if (isLoading) return null;
 
   return (
-    <div className="absolute top-4 left-4 z-20 w-[320px]">
+    <div className="absolute top-4 left-4 z-20 w-[300px]">
       {/* Toggle button */}
       <button
         onClick={() => setFilterPanelOpen(!filterPanelOpen)}
-        className="flex items-center gap-2 px-3 py-2 mb-2 glass-panel rounded-lg hud-corners text-[#00F0FF] hover:bg-[#00F0FF]/10 transition-colors w-full"
+        className="flex items-center gap-2 px-4 py-2.5 mb-2 liquid-glass rounded-2xl text-white/70 hover:text-white/90 transition-colors w-full"
       >
-        <Filter size={14} />
-        <span className="font-display text-xs font-semibold tracking-wider uppercase">
+        <SlidersHorizontal size={14} className="text-cyan-400/60" />
+        <span className="font-display text-[11px] font-medium tracking-wider uppercase">
           Audience Filters
         </span>
         <span className="ml-auto flex items-center gap-2">
-          <span className="flex items-center gap-1 text-[10px] text-[#00F0FF]/60">
+          <span className="flex items-center gap-1 text-[10px] text-cyan-300/50 font-display">
             <Users size={10} />
             {filteredCount.toLocaleString()}
           </span>
-          {filterPanelOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {filterPanelOpen ? <ChevronUp size={13} className="text-white/40" /> : <ChevronDown size={13} className="text-white/40" />}
         </span>
       </button>
 
       {filterPanelOpen && (
-        <GlassPanel className="p-4 space-y-4" glow>
+        <GlassPanel variant="glow" className="p-4 space-y-4">
           {/* Age Range */}
           <div>
-            <label className="text-micro text-[#00F0FF]/70 mb-2 block font-display">
+            <label className="text-micro text-cyan-300/50 mb-2.5 block font-display">
               Age Range: {filters.ageRange[0]} — {filters.ageRange[1]}
             </label>
             <Slider
@@ -73,22 +73,22 @@ export default function FilterPanel() {
               step={1}
               value={filters.ageRange}
               onValueChange={(val) => setFilters({ ...filters, ageRange: val as [number, number] })}
-              className="[&_[role=slider]]:bg-[#00F0FF] [&_[role=slider]]:border-[#00F0FF]/50 [&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [&_.relative>div:first-child]:bg-[#00F0FF]/20 [&_.relative>div:first-child>div]:bg-[#00F0FF]"
+              className="[&_[role=slider]]:bg-cyan-400 [&_[role=slider]]:border-cyan-400/50 [&_[role=slider]]:h-3.5 [&_[role=slider]]:w-3.5 [&_[role=slider]]:shadow-[0_0_8px_rgba(0,200,255,0.3)] [&_.relative>div:first-child]:bg-white/8 [&_.relative>div:first-child>div]:bg-cyan-400/60"
             />
           </div>
 
           {/* Sex */}
           <div>
-            <label className="text-micro text-[#00F0FF]/70 mb-2 block font-display">Sex</label>
-            <div className="flex gap-1">
+            <label className="text-micro text-cyan-300/50 mb-2.5 block font-display">Sex</label>
+            <div className="flex gap-1.5">
               {(["Any", "Male", "Female"] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setFilters({ ...filters, sex: s })}
-                  className={`flex-1 py-1.5 text-xs font-display rounded transition-all ${
+                  className={`flex-1 py-2 text-xs font-display rounded-xl transition-all ${
                     filters.sex === s
-                      ? "bg-[#00F0FF]/20 text-[#00F0FF] border border-[#00F0FF]/40"
-                      : "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10"
+                      ? "bg-cyan-400/15 text-cyan-300 border border-cyan-400/30 shadow-[0_0_12px_rgba(0,200,255,0.1)]"
+                      : "bg-white/4 text-white/40 border border-white/6 hover:bg-white/8 hover:text-white/60"
                   }`}
                 >
                   {s}
@@ -99,18 +99,18 @@ export default function FilterPanel() {
 
           {/* Occupation */}
           <div>
-            <label className="text-micro text-[#00F0FF]/70 mb-2 block font-display">Occupation</label>
+            <label className="text-micro text-cyan-300/50 mb-2.5 block font-display">Occupation</label>
             <input
               type="text"
               placeholder="Search occupations..."
               value={occupationSearch}
               onChange={(e) => setOccupationSearch(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white/5 border border-white/10 rounded text-white/80 placeholder:text-white/30 focus:border-[#00F0FF]/40 focus:outline-none focus:ring-1 focus:ring-[#00F0FF]/20 mb-1"
+              className="w-full px-3 py-2 text-xs bg-white/4 border border-white/8 rounded-xl text-white/80 placeholder:text-white/25 focus:border-cyan-400/30 focus:outline-none focus:ring-1 focus:ring-cyan-400/15 mb-1.5 transition-all"
             />
             <select
               value={filters.occupation}
               onChange={(e) => setFilters({ ...filters, occupation: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#0A0E17] border border-white/10 rounded text-white/80 focus:border-[#00F0FF]/40 focus:outline-none"
+              className="w-full px-3 py-2 text-xs bg-[#0D1117] border border-white/8 rounded-xl text-white/80 focus:border-cyan-400/30 focus:outline-none transition-all"
             >
               <option value="">All Occupations</option>
               {filteredOccupations.map((o) => (
@@ -121,11 +121,11 @@ export default function FilterPanel() {
 
           {/* Education Level */}
           <div>
-            <label className="text-micro text-[#00F0FF]/70 mb-2 block font-display">Education</label>
+            <label className="text-micro text-cyan-300/50 mb-2.5 block font-display">Education</label>
             <select
               value={filters.educationLevel}
               onChange={(e) => setFilters({ ...filters, educationLevel: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#0A0E17] border border-white/10 rounded text-white/80 focus:border-[#00F0FF]/40 focus:outline-none"
+              className="w-full px-3 py-2 text-xs bg-[#0D1117] border border-white/8 rounded-xl text-white/80 focus:border-cyan-400/30 focus:outline-none transition-all"
             >
               <option value="">All Levels</option>
               {filterMeta?.education_levels.map((e) => (
@@ -136,11 +136,11 @@ export default function FilterPanel() {
 
           {/* State */}
           <div>
-            <label className="text-micro text-[#00F0FF]/70 mb-2 block font-display">State</label>
+            <label className="text-micro text-cyan-300/50 mb-2.5 block font-display">State</label>
             <select
               value={filters.state}
               onChange={(e) => setFilters({ ...filters, state: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#0A0E17] border border-white/10 rounded text-white/80 focus:border-[#00F0FF]/40 focus:outline-none"
+              className="w-full px-3 py-2 text-xs bg-[#0D1117] border border-white/8 rounded-xl text-white/80 focus:border-cyan-400/30 focus:outline-none transition-all"
             >
               <option value="">All States</option>
               {filterMeta?.states.map((s) => (
@@ -151,7 +151,7 @@ export default function FilterPanel() {
 
           {/* Sample Size */}
           <div>
-            <label className="text-micro text-[#00F0FF]/70 mb-2 block font-display">
+            <label className="text-micro text-cyan-300/50 mb-2.5 block font-display">
               Sample Size: {filters.sampleSize}
             </label>
             <Slider
@@ -160,14 +160,14 @@ export default function FilterPanel() {
               step={5}
               value={[filters.sampleSize]}
               onValueChange={(val) => setFilters({ ...filters, sampleSize: val[0] })}
-              className="[&_[role=slider]]:bg-[#00F0FF] [&_[role=slider]]:border-[#00F0FF]/50 [&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [&_.relative>div:first-child]:bg-[#00F0FF]/20 [&_.relative>div:first-child>div]:bg-[#00F0FF]"
+              className="[&_[role=slider]]:bg-cyan-400 [&_[role=slider]]:border-cyan-400/50 [&_[role=slider]]:h-3.5 [&_[role=slider]]:w-3.5 [&_[role=slider]]:shadow-[0_0_8px_rgba(0,200,255,0.3)] [&_.relative>div:first-child]:bg-white/8 [&_.relative>div:first-child>div]:bg-cyan-400/60"
             />
           </div>
 
           {/* Reset */}
           <button
             onClick={resetFilters}
-            className="flex items-center justify-center gap-2 w-full py-2 text-xs font-display text-white/50 hover:text-[#00F0FF] border border-white/10 hover:border-[#00F0FF]/30 rounded transition-all"
+            className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-display text-white/35 hover:text-cyan-300/80 border border-white/6 hover:border-cyan-400/20 rounded-xl transition-all"
           >
             <RotateCcw size={12} />
             Reset Filters

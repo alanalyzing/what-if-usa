@@ -1,11 +1,11 @@
 /**
- * DESIGN: Tactical Command Center — Question Input Bar
+ * DESIGN: Liquid Glass — Question Input Bar
  * Bottom-center glass panel with text input, send button, and suggestion pills
  */
 
 import { useApp } from "@/contexts/AppContext";
 import { SUGGESTION_QUESTIONS } from "@/lib/types";
-import { Send, Loader2, Zap } from "lucide-react";
+import { Send, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -32,7 +32,7 @@ export default function QuestionBar() {
       {/* Suggestion pills */}
       <AnimatePresence>
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
           className="flex flex-wrap justify-center gap-2 mb-3"
@@ -40,12 +40,12 @@ export default function QuestionBar() {
           {SUGGESTION_QUESTIONS.map((q, i) => (
             <motion.button
               key={i}
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 + i * 0.05 }}
+              transition={{ duration: 0.3, delay: 0.1 + i * 0.04 }}
               onClick={() => handleSuggestion(q)}
               disabled={isSimulating}
-              className="px-3 py-1.5 text-[11px] font-medium bg-[#0A0E17]/80 backdrop-blur-md border border-[#00F0FF]/15 rounded-full text-[#00F0FF]/70 hover:text-[#00F0FF] hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 transition-all disabled:opacity-40 whitespace-nowrap"
+              className="liquid-pill px-3.5 py-1.5 text-[11px] font-medium text-white/50 hover:text-cyan-300/90 disabled:opacity-30 whitespace-nowrap"
             >
               {q}
             </motion.button>
@@ -55,30 +55,30 @@ export default function QuestionBar() {
 
       {/* Input bar */}
       <motion.form
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         onSubmit={handleSubmit}
-        className="glass-panel hud-corners glow-cyan rounded-xl flex items-center gap-3 px-4 py-3"
+        className="liquid-glass-glow rounded-2xl flex items-center gap-3 px-5 py-3.5"
       >
-        <Zap size={16} className="text-[#00F0FF]/50 shrink-0" />
+        <Sparkles size={16} className="text-cyan-400/40 shrink-0" />
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="What if USA..."
+          placeholder="Ask anything... What if USA..."
           disabled={isSimulating}
-          className="flex-1 bg-transparent text-sm text-white/90 placeholder:text-white/30 focus:outline-none font-sans disabled:opacity-50"
+          className="flex-1 bg-transparent text-sm text-white/90 placeholder:text-white/25 focus:outline-none font-sans disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={!input.trim() || isSimulating}
-          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-[#00F0FF]/15 border border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/25 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-cyan-400/12 border border-cyan-400/20 text-cyan-400/80 hover:bg-cyan-400/20 hover:text-cyan-300 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
         >
           {isSimulating ? (
             <Loader2 size={16} className="animate-spin" />
           ) : (
-            <Send size={16} />
+            <Send size={15} />
           )}
         </button>
       </motion.form>

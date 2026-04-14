@@ -1,6 +1,6 @@
 /**
- * DESIGN: Tactical Command Center — Persona Response Card
- * Expandable card showing demographic info, simulated answer, and rich persona details
+ * DESIGN: Liquid Glass — Persona Response Card
+ * Expandable card showing demographic info, AI-generated answer, and rich persona details
  */
 
 import type { PersonaResponse } from "@/lib/types";
@@ -10,15 +10,15 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SENTIMENT_COLORS = {
-  positive: "#00FF88",
-  neutral: "#FFB800",
-  negative: "#FF3B5C",
+  positive: "#34D399",
+  neutral: "#FBBF24",
+  negative: "#F87171",
 };
 
 const SENTIMENT_LABELS = {
-  positive: "POS",
-  neutral: "NEU",
-  negative: "NEG",
+  positive: "Positive",
+  neutral: "Neutral",
+  negative: "Negative",
 };
 
 function formatOcc(occ: string) {
@@ -32,46 +32,46 @@ export default function PersonaCard({ response, index }: { response: PersonaResp
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.04 }}
-      className="border rounded-lg overflow-hidden transition-colors"
-      style={{ borderColor: `${color}20` }}
+      transition={{ duration: 0.25, delay: index * 0.03 }}
+      className="liquid-glass-subtle rounded-xl overflow-hidden transition-all"
+      style={{ borderColor: `${color}15` }}
     >
       {/* Main content */}
-      <div className="p-3 space-y-2">
+      <div className="p-3.5 space-y-2.5">
         {/* Demographics row */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}12`, border: `1px solid ${color}20` }}>
             <div
               className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}` }}
+              style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}60` }}
             />
-            <span className="text-[10px] font-display font-bold tracking-wider" style={{ color }}>
+            <span className="text-[10px] font-display font-medium tracking-wider" style={{ color }}>
               {SENTIMENT_LABELS[sentiment]}
             </span>
           </div>
-          <div className="flex items-center gap-1 text-white/40">
+          <div className="flex items-center gap-1 text-white/35">
             <User size={10} />
             <span className="text-[10px]">{persona.sex}, {persona.age}</span>
           </div>
-          <div className="flex items-center gap-1 text-white/40">
+          <div className="flex items-center gap-1 text-white/35">
             <Briefcase size={10} />
             <span className="text-[10px] truncate max-w-[120px]">{formatOcc(persona.occupation)}</span>
           </div>
-          <div className="flex items-center gap-1 text-white/40">
+          <div className="flex items-center gap-1 text-white/35">
             <MapPin size={10} />
             <span className="text-[10px]">{persona.city}, {persona.state}</span>
           </div>
         </div>
 
         {/* Answer */}
-        <p className="text-[13px] text-white/80 leading-relaxed">{answer}</p>
+        <p className="text-[13px] text-white/75 leading-relaxed">{answer}</p>
 
         {/* Expand button */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-[10px] font-display text-[#00F0FF]/50 hover:text-[#00F0FF] transition-colors tracking-wider uppercase"
+          className="flex items-center gap-1.5 text-[10px] font-display text-cyan-400/40 hover:text-cyan-300/80 transition-colors tracking-wider uppercase"
         >
           {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           {expanded ? "Collapse" : "View Full Profile"}
@@ -88,12 +88,10 @@ export default function PersonaCard({ response, index }: { response: PersonaResp
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-3 space-y-3 border-t border-white/5 pt-3">
-              {/* Persona summary */}
+            <div className="px-3.5 pb-3.5 space-y-3 border-t border-white/5 pt-3">
               <DetailSection icon={<User size={11} />} label="Persona" text={persona.persona} />
               <DetailSection icon={<Briefcase size={11} />} label="Professional" text={persona.professional_persona} />
 
-              {/* Demographics grid */}
               <div className="grid grid-cols-2 gap-2">
                 <DetailChip label="Education" value={EDUCATION_LABELS[persona.education_level] || persona.education_level} />
                 <DetailChip label="Marital Status" value={persona.marital_status.replace(/_/g, " ")} />
@@ -101,20 +99,18 @@ export default function PersonaCard({ response, index }: { response: PersonaResp
                 <DetailChip label="Zipcode" value={persona.zipcode} />
               </div>
 
-              {/* Cultural background */}
               {persona.cultural_background && (
                 <DetailSection icon={<GraduationCap size={11} />} label="Cultural Background" text={persona.cultural_background} />
               )}
 
-              {/* Hobbies */}
               {persona.hobbies_and_interests_list && Array.isArray(persona.hobbies_and_interests_list) && (
                 <div>
-                  <span className="text-[10px] font-display text-[#00F0FF]/50 tracking-wider uppercase block mb-1.5">
+                  <span className="text-[10px] font-display text-cyan-300/40 tracking-wider uppercase block mb-1.5">
                     Hobbies & Interests
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {persona.hobbies_and_interests_list.slice(0, 8).map((h, i) => (
-                      <span key={i} className="px-2 py-0.5 text-[10px] bg-[#00F0FF]/8 border border-[#00F0FF]/15 rounded-full text-[#00F0FF]/70">
+                      <span key={i} className="liquid-pill px-2 py-0.5 text-[10px] text-cyan-300/60">
                         {h}
                       </span>
                     ))}
@@ -122,7 +118,6 @@ export default function PersonaCard({ response, index }: { response: PersonaResp
                 </div>
               )}
 
-              {/* Career Goals */}
               {persona.career_goals_and_ambitions && (
                 <DetailSection icon={<Briefcase size={11} />} label="Career Goals" text={persona.career_goals_and_ambitions} />
               )}
@@ -138,19 +133,19 @@ function DetailSection({ icon, label, text }: { icon: React.ReactNode; label: st
   return (
     <div>
       <div className="flex items-center gap-1.5 mb-1">
-        <span className="text-[#00F0FF]/40">{icon}</span>
-        <span className="text-[10px] font-display text-[#00F0FF]/50 tracking-wider uppercase">{label}</span>
+        <span className="text-cyan-400/30">{icon}</span>
+        <span className="text-[10px] font-display text-cyan-300/40 tracking-wider uppercase">{label}</span>
       </div>
-      <p className="text-[11px] text-white/60 leading-relaxed line-clamp-4">{text}</p>
+      <p className="text-[11px] text-white/50 leading-relaxed line-clamp-4">{text}</p>
     </div>
   );
 }
 
 function DetailChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-2 py-1.5 bg-white/3 rounded border border-white/5">
-      <span className="text-[9px] font-display text-white/30 tracking-wider uppercase block">{label}</span>
-      <span className="text-[11px] text-white/70 capitalize">{value}</span>
+    <div className="px-2.5 py-2 bg-white/3 rounded-lg border border-white/4">
+      <span className="text-[9px] font-display text-white/25 tracking-wider uppercase block">{label}</span>
+      <span className="text-[11px] text-white/60 capitalize">{value}</span>
     </div>
   );
 }
