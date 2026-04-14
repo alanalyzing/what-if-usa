@@ -1,11 +1,11 @@
 /**
  * DESIGN: Liquid Glass — Top Status Bar
- * Centered top bar with app title and status indicators
+ * Centered top bar with app title, status indicators, and data source provenance
  */
 
 import { useApp } from "@/contexts/AppContext";
 import { STATE_NAMES } from "@/lib/types";
-import { Database, MapPin, Sparkles } from "lucide-react";
+import { Database, MapPin, Sparkles, Shield } from "lucide-react";
 
 export default function StatusBar() {
   const { personas, selectedState, isLoading } = useApp();
@@ -46,6 +46,17 @@ export default function StatusBar() {
             <Sparkles size={10} className="text-emerald-400/60" />
             <span className="text-emerald-400/70">AI-Powered</span>
           </span>
+          <div className="w-px h-3 bg-white/8" />
+          <a
+            href="https://huggingface.co/datasets/nvidia/Nemotron-Personas-USA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-amber-400/50 hover:text-amber-400/80 transition-colors"
+            title="Data sourced from NVIDIA Nemotron-Personas-USA dataset on Hugging Face"
+          >
+            <Shield size={10} />
+            <span>NVIDIA Nemotron</span>
+          </a>
         </div>
       </div>
     </div>

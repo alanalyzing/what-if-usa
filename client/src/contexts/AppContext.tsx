@@ -1,7 +1,7 @@
 /**
  * DESIGN: Liquid Glass — Global State Management
- * Handles persona data, filters, LLM-powered simulation, query history, and UI state
- * Implements incremental result delivery: results appear one by one during the "delivering" phase
+ * Handles persona data, filters, LLM-powered simulation with progressive wave delivery,
+ * query history, and UI state. Waves: first 10, then 20, then rest.
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
@@ -19,6 +19,14 @@ const DATA_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663249428057/7pggg
 const META_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663249428057/7pgggnfjc7LYDVaKEjkhKS/filter_meta_27ef7c8b.json";
 
 export type SimulationPhase = "idle" | "thinking" | "drafting" | "delivering";
+
+interface WaveProgress {
+  currentWave: number;
+  totalWaves: number;
+  completedPersonas: number;
+  totalPersonas: number;
+  waveSizes: number[];
+}
 
 interface StateSentiment {
   [state: string]: { positive: number; neutral: number; negative: number; total: number };
@@ -45,6 +53,7 @@ interface AppState {
   setCurrentQuestion: (q: string) => void;
   isSimulating: boolean;
   simulationPhase: SimulationPhase;
+  waveProgress: WaveProgress | null;
   responses: PersonaResponse[];
   sentiment: SentimentSummary | null;
   submitQuestion: (question: string) => void;
@@ -77,8 +86,23 @@ const defaultFilters: Filters = {
 
 const AppContext = createContext<AppState | null>(null);
 
-// Cap sample size to backend limit
 const MAX_BACKEND_PERSONAS = 100;
+
+/**
+ * Compute wave sizes for progressive delivery.
+ * Absolute steps: first 10, then 20, then the rest.
+ * Matches the server-side computeWaves logic.
+ */
+function computeWaveSizes(total: number): number[] {
+  if (total <= 10) return [total];
+  const wave1 = 10;
+  const remaining1 = total - wave1;
+  if (remaining1 <= 0) return [total];
+  const wave2 = Math.min(20, remaining1);
+  const remaining2 = remaining1 - wave2;
+  if (remaining2 <= 0) return [wave1, wave2];
+  return [wave1, wave2, remaining2];
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [personas, setPersonas] = useState<Persona[]>([]);
@@ -93,6 +117,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationPhase, setSimulationPhase] = useState<SimulationPhase>("idle");
+  const [waveProgress, setWaveProgress] = useState<WaveProgress | null>(null);
   const [responses, setResponses] = useState<PersonaResponse[]>([]);
   const [sentiment, setSentiment] = useState<SentimentSummary | null>(null);
 
@@ -111,8 +136,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const personasRef = useRef<Persona[]>([]);
 
-  // tRPC mutation for LLM-powered simulation
-  const generateMutation = trpc.simulation.generate.useMutation();
+  // tRPC mutation for wave-based LLM generation
+  const generateWaveMutation = trpc.simulation.generateWave.useMutation();
 
   // Load data
   useEffect(() => {
@@ -168,9 +193,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCurrentQuestion(question);
     setResponses([]);
     setSentiment(null);
+    setWaveProgress(null);
 
     try {
-      // Phase 1: Thinking — filter and sample personas
+      // Phase 1: THINKING — filter and sample personas
       const activeFilters = { ...filters };
       if (selectedState) {
         activeFilters.state = selectedState;
@@ -198,47 +224,91 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         career_goals_and_ambitions: p.career_goals_and_ambitions || undefined,
       }));
 
-      // Phase 2: Drafting — send to LLM API
-      await new Promise((r) => setTimeout(r, 600));
+      // Compute wave sizes
+      const waveSizes = computeWaveSizes(apiPersonas.length);
+      const totalWaves = waveSizes.length;
+
+      setWaveProgress({
+        currentWave: 0,
+        totalWaves,
+        completedPersonas: 0,
+        totalPersonas: apiPersonas.length,
+        waveSizes,
+      });
+
+      // Phase 2: DRAFTING — send waves sequentially to LLM
+      await new Promise((r) => setTimeout(r, 400));
       setSimulationPhase("drafting");
 
-      const result = await generateMutation.mutateAsync({
-        question,
-        personas: apiPersonas,
-      });
+      const allResponses: PersonaResponse[] = [];
+      let personaOffset = 0;
 
-      // Phase 3: Delivering — incrementally reveal results one by one
-      setSimulationPhase("delivering");
+      for (let waveIdx = 0; waveIdx < totalWaves; waveIdx++) {
+        const waveSize = waveSizes[waveIdx];
+        const wavePersonas = apiPersonas.slice(personaOffset, personaOffset + waveSize);
+        const waveSampled = sampled.slice(personaOffset, personaOffset + waveSize);
 
-      // Map LLM results back to full persona objects
-      const allResponses: PersonaResponse[] = sampled.map((persona) => {
-        const llmResult = result.results.find(
-          (r) => r.personaId === (persona.uuid || String(persona.id))
-        );
-        return {
-          persona,
-          answer: llmResult?.answer || "I'd need more time to consider this question.",
-          sentiment: llmResult?.sentiment || "neutral",
-        };
-      });
+        setWaveProgress({
+          currentWave: waveIdx + 1,
+          totalWaves,
+          completedPersonas: personaOffset,
+          totalPersonas: apiPersonas.length,
+          waveSizes,
+        });
 
-      // Incremental delivery: add responses one by one with a stagger
-      const STAGGER_MS = 80; // 80ms between each card appearing
-      for (let i = 0; i < allResponses.length; i++) {
-        await new Promise((r) => setTimeout(r, STAGGER_MS));
-        const partial = allResponses.slice(0, i + 1);
-        setResponses(partial);
-        // Update sentiment progressively
-        setSentiment(computeSentiment(partial));
+        // Call the API for this wave
+        const result = await generateWaveMutation.mutateAsync({
+          question,
+          personas: wavePersonas,
+          waveIndex: waveIdx,
+          totalWaves,
+        });
+
+        // Phase 3: DELIVERING — switch to delivering after first wave completes
+        if (waveIdx === 0) {
+          setSimulationPhase("delivering");
+        }
+
+        // Map LLM results back to full persona objects
+        const waveResponses: PersonaResponse[] = waveSampled.map((persona) => {
+          const llmResult = result.results.find(
+            (r) => r.personaId === (persona.uuid || String(persona.id))
+          );
+          return {
+            persona,
+            answer: llmResult?.answer || "I'd need more time to consider this question.",
+            sentiment: llmResult?.sentiment || "neutral",
+          };
+        });
+
+        // Incrementally add wave results with stagger animation
+        const STAGGER_MS = 60;
+        for (let i = 0; i < waveResponses.length; i++) {
+          await new Promise((r) => setTimeout(r, STAGGER_MS));
+          allResponses.push(waveResponses[i]);
+          setResponses([...allResponses]);
+          setSentiment(computeSentiment(allResponses));
+        }
+
+        // Update wave progress
+        personaOffset += waveSize;
+        setWaveProgress({
+          currentWave: waveIdx + 1,
+          totalWaves,
+          completedPersonas: personaOffset,
+          totalPersonas: apiPersonas.length,
+          waveSizes,
+        });
+
+        // Update state sentiment after each wave
+        setStateSentiment(analyzeSentimentByState(allResponses));
       }
 
       // Final state
       const sentimentData = computeSentiment(allResponses);
-      const stSentiment = analyzeSentimentByState(allResponses);
-
       setResponses(allResponses);
       setSentiment(sentimentData);
-      setStateSentiment(stSentiment);
+      setStateSentiment(analyzeSentimentByState(allResponses));
 
       // Add to history
       const entry: QueryHistoryEntry = {
@@ -258,6 +328,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsSimulating(false);
       setSimulationPhase("idle");
+      setWaveProgress(null);
     }
   }, [filters, selectedState, isSimulating]);
 
@@ -270,7 +341,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setResultsPanelOpen(true);
     setHistoryPanelOpen(false);
 
-    // Recompute state sentiment from stored responses
     if (entry.responses.length) {
       setStateSentiment(analyzeSentimentByState(entry.responses));
     }
@@ -287,7 +357,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         filters, setFilters,
         selectedState, setSelectedState, stateSentiment,
         currentQuestion, setCurrentQuestion,
-        isSimulating, simulationPhase, responses, sentiment,
+        isSimulating, simulationPhase, waveProgress, responses, sentiment,
         submitQuestion,
         history, loadHistoryEntry, deleteHistoryEntry,
         filterPanelOpen, setFilterPanelOpen,

@@ -1,6 +1,7 @@
 /**
- * DESIGN: Liquid Glass — Full-Screen Map Visualization
- * MapLibre GL JS with US States GeoJSON, gradient background, soft choropleth, click-to-filter
+ * DESIGN: Liquid Glass — 3D Terrain Map Visualization
+ * MapLibre GL JS with 3D terrain, hillshading, US States GeoJSON choropleth, click-to-filter.
+ * Uses CARTO dark tiles + MapTiler terrain for 3D depth.
  */
 
 import { useApp } from "@/contexts/AppContext";
@@ -17,18 +18,18 @@ for (const [abbr, name] of Object.entries(STATE_NAMES)) {
 }
 
 function getSentimentColor(data: { positive: number; neutral: number; negative: number; total: number } | undefined): string {
-  if (!data || data.total === 0) return "rgba(100, 180, 255, 0.06)";
+  if (!data || data.total === 0) return "rgba(100, 180, 255, 0.08)";
   const posRatio = data.positive / data.total;
   const negRatio = data.negative / data.total;
   if (posRatio > 0.5) {
-    const intensity = 0.12 + posRatio * 0.28;
+    const intensity = 0.15 + posRatio * 0.35;
     return `rgba(52, 211, 153, ${intensity})`;
   }
   if (negRatio > 0.5) {
-    const intensity = 0.12 + negRatio * 0.28;
+    const intensity = 0.15 + negRatio * 0.35;
     return `rgba(248, 113, 113, ${intensity})`;
   }
-  const intensity = 0.12 + (data.neutral / data.total) * 0.22;
+  const intensity = 0.15 + (data.neutral / data.total) * 0.3;
   return `rgba(251, 191, 36, ${intensity})`;
 }
 
@@ -48,25 +49,89 @@ export default function USAMap() {
       container: mapContainer.current,
       style: {
         version: 8,
-        sources: {},
+        sources: {
+          "dark-matter": {
+            type: "raster",
+            tiles: [
+              "https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png",
+            ],
+            tileSize: 256,
+            attribution: "&copy; CARTO &copy; OpenStreetMap contributors",
+            maxzoom: 19,
+          },
+        },
         layers: [
           {
             id: "background",
             type: "background",
-            paint: { "background-color": "#080B12" },
+            paint: { "background-color": "#060910" },
+          },
+          {
+            id: "dark-base",
+            type: "raster",
+            source: "dark-matter",
+            paint: {
+              "raster-opacity": 0.5,
+              "raster-brightness-max": 0.5,
+              "raster-contrast": 0.3,
+              "raster-saturation": -0.6,
+            },
           },
         ],
         glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
       },
-      center: [-98.5, 39.8],
-      zoom: 3.8,
+      center: [-97.5, 38.5],
+      zoom: 4.0,
+      pitch: 40,
+      bearing: -8,
       minZoom: 2,
-      maxZoom: 8,
+      maxZoom: 10,
+      maxPitch: 60,
       attributionControl: false,
     });
 
     map.on("load", async () => {
       try {
+        // Try to add 3D terrain from a free DEM source
+        try {
+          map.addSource("terrainSource", {
+            type: "raster-dem",
+            tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            maxzoom: 14,
+            encoding: "terrarium",
+          });
+
+          map.addSource("hillshadeSource", {
+            type: "raster-dem",
+            tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            maxzoom: 14,
+            encoding: "terrarium",
+          });
+
+          // Add hillshade layer for depth
+          map.addLayer({
+            id: "hillshade",
+            type: "hillshade",
+            source: "hillshadeSource",
+            paint: {
+              "hillshade-shadow-color": "#0a0e1a",
+              "hillshade-highlight-color": "rgba(140, 180, 220, 0.12)",
+              "hillshade-accent-color": "rgba(80, 120, 180, 0.08)",
+              "hillshade-exaggeration": 0.35,
+              "hillshade-illumination-direction": 315,
+            },
+          });
+
+          // Enable 3D terrain
+          map.setTerrain({ source: "terrainSource", exaggeration: 1.8 });
+          console.log("[Map] 3D terrain enabled");
+        } catch (terrainErr) {
+          console.warn("[Map] 3D terrain unavailable, continuing with 2D:", terrainErr);
+        }
+
+        // Load US states GeoJSON
         const res = await fetch(GEOJSON_URL);
         const geojson = await res.json();
 
@@ -81,29 +146,51 @@ export default function USAMap() {
           type: "fill",
           source: "us-states",
           paint: {
-            "fill-color": "rgba(100, 180, 255, 0.06)",
+            "fill-color": "rgba(100, 180, 255, 0.08)",
             "fill-opacity": 1,
           },
         });
 
-        // State borders — soft glowing lines
+        // State borders — glowing lines
         map.addLayer({
           id: "state-borders",
           type: "line",
           source: "us-states",
           paint: {
-            "line-color": "rgba(120, 180, 255, 0.18)",
-            "line-width": 0.8,
+            "line-color": "rgba(120, 180, 255, 0.22)",
+            "line-width": [
+              "interpolate", ["linear"], ["zoom"],
+              3, 0.6,
+              6, 1.2,
+              8, 1.8,
+            ],
           },
         });
 
-        // Hover highlight — brighter fill
+        // Outer glow border for depth
+        map.addLayer({
+          id: "state-borders-glow",
+          type: "line",
+          source: "us-states",
+          paint: {
+            "line-color": "rgba(80, 150, 255, 0.06)",
+            "line-width": [
+              "interpolate", ["linear"], ["zoom"],
+              3, 3,
+              6, 5,
+              8, 7,
+            ],
+            "line-blur": 4,
+          },
+        });
+
+        // Hover highlight
         map.addLayer({
           id: "state-hover",
           type: "fill",
           source: "us-states",
           paint: {
-            "fill-color": "rgba(100, 200, 255, 0.12)",
+            "fill-color": "rgba(100, 200, 255, 0.15)",
             "fill-opacity": 0,
           },
         });
@@ -114,8 +201,8 @@ export default function USAMap() {
           type: "line",
           source: "us-states",
           paint: {
-            "line-color": "rgba(100, 200, 255, 0.4)",
-            "line-width": 1.5,
+            "line-color": "rgba(100, 200, 255, 0.5)",
+            "line-width": 2,
             "line-opacity": 0,
           },
         });
@@ -126,8 +213,8 @@ export default function USAMap() {
           type: "line",
           source: "us-states",
           paint: {
-            "line-color": "rgba(0, 200, 255, 0.7)",
-            "line-width": 2,
+            "line-color": "rgba(0, 220, 255, 0.8)",
+            "line-width": 2.5,
           },
           filter: ["==", "name", ""],
         });
@@ -138,8 +225,21 @@ export default function USAMap() {
           type: "fill",
           source: "us-states",
           paint: {
-            "fill-color": "rgba(0, 200, 255, 0.08)",
+            "fill-color": "rgba(0, 200, 255, 0.12)",
             "fill-opacity": 1,
+          },
+          filter: ["==", "name", ""],
+        });
+
+        // Selected state outer glow
+        map.addLayer({
+          id: "state-selected-glow",
+          type: "line",
+          source: "us-states",
+          paint: {
+            "line-color": "rgba(0, 200, 255, 0.25)",
+            "line-width": 6,
+            "line-blur": 5,
           },
           filter: ["==", "name", ""],
         });
@@ -186,16 +286,16 @@ export default function USAMap() {
             font-family: 'JetBrains Mono', monospace;
             font-size: 11px;
             color: rgba(200, 230, 255, 0.9);
-            padding: 6px 12px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-            border: 1px solid rgba(255,255,255,0.12);
+            padding: 6px 14px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+            border: 1px solid rgba(255,255,255,0.15);
             border-radius: 10px;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            backdrop-filter: blur(24px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
             letter-spacing: 0.03em;
           ">
-            <strong style="color: rgba(100, 200, 255, 0.9);">${name}</strong>
-            ${abbr ? `<span style="opacity: 0.5; margin-left: 4px;">${abbr}</span>` : ""}
+            <strong style="color: rgba(100, 210, 255, 0.95);">${name}</strong>
+            ${abbr ? `<span style="opacity: 0.5; margin-left: 6px;">${abbr}</span>` : ""}
           </div>
         `)
         .addTo(map);
@@ -235,7 +335,7 @@ export default function USAMap() {
     const map = mapRef.current;
 
     if (Object.keys(stateSentiment).length === 0) {
-      map.setPaintProperty("state-fills", "fill-color", "rgba(100, 180, 255, 0.06)");
+      map.setPaintProperty("state-fills", "fill-color", "rgba(100, 180, 255, 0.08)");
       return;
     }
 
@@ -246,7 +346,7 @@ export default function USAMap() {
         matchExpr.push(name, getSentimentColor(data));
       }
     }
-    matchExpr.push("rgba(100, 180, 255, 0.06)");
+    matchExpr.push("rgba(100, 180, 255, 0.08)");
 
     map.setPaintProperty("state-fills", "fill-color", matchExpr);
   }, [stateSentiment, mapLoaded]);
@@ -260,20 +360,32 @@ export default function USAMap() {
       const name = STATE_NAMES[selectedState] || "";
       map.setFilter("state-selected", ["==", "name", name]);
       map.setFilter("state-selected-fill", ["==", "name", name]);
+      map.setFilter("state-selected-glow", ["==", "name", name]);
     } else {
       map.setFilter("state-selected", ["==", "name", ""]);
       map.setFilter("state-selected-fill", ["==", "name", ""]);
+      map.setFilter("state-selected-glow", ["==", "name", ""]);
     }
   }, [selectedState, mapLoaded]);
 
   return (
     <>
       <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-      {/* Subtle radial gradient overlay for depth */}
+      {/* Atmospheric vignette overlay for cinematic depth */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(8, 11, 18, 0.4) 100%)",
+          background: `
+            radial-gradient(ellipse at 50% 35%, transparent 35%, rgba(6, 9, 16, 0.35) 80%, rgba(6, 9, 16, 0.7) 100%),
+            linear-gradient(to bottom, rgba(6, 9, 16, 0.2) 0%, transparent 15%, transparent 85%, rgba(6, 9, 16, 0.3) 100%)
+          `,
+        }}
+      />
+      {/* Subtle top-edge light leak for 3D atmosphere */}
+      <div
+        className="absolute inset-x-0 top-0 h-32 pointer-events-none"
+        style={{
+          background: "linear-gradient(to bottom, rgba(80, 140, 220, 0.03) 0%, transparent 100%)",
         }}
       />
     </>

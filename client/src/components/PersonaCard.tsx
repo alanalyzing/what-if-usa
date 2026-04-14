@@ -1,11 +1,11 @@
 /**
  * DESIGN: Liquid Glass — Persona Response Card
- * Expandable card showing demographic info, AI-generated answer, and rich persona details
+ * Expandable card showing demographic info, AI-generated answer, data source provenance, and rich persona details
  */
 
 import type { PersonaResponse } from "@/lib/types";
 import { STATE_NAMES, EDUCATION_LABELS } from "@/lib/types";
-import { ChevronDown, ChevronUp, MapPin, Briefcase, GraduationCap, User } from "lucide-react";
+import { ChevronDown, ChevronUp, MapPin, Briefcase, GraduationCap, User, Cpu, Database } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -68,6 +68,18 @@ export default function PersonaCard({ response, index }: { response: PersonaResp
         {/* Answer */}
         <p className="text-[13px] text-white/75 leading-relaxed">{answer}</p>
 
+        {/* Source annotations */}
+        <div className="flex items-center gap-3 text-[9px] text-white/20 font-display">
+          <span className="flex items-center gap-1">
+            <Database size={8} className="text-amber-400/30" />
+            <span className="text-amber-400/40">Nemotron Persona</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <Cpu size={8} className="text-cyan-400/30" />
+            <span className="text-cyan-400/40">AI-Generated Response</span>
+          </span>
+        </div>
+
         {/* Expand button */}
         <button
           onClick={() => setExpanded(!expanded)}
@@ -121,6 +133,25 @@ export default function PersonaCard({ response, index }: { response: PersonaResp
               {persona.career_goals_and_ambitions && (
                 <DetailSection icon={<Briefcase size={11} />} label="Career Goals" text={persona.career_goals_and_ambitions} />
               )}
+
+              {/* Data provenance footer */}
+              <div className="pt-2 border-t border-white/4">
+                <div className="flex items-center gap-2 text-[9px] text-white/15 font-display">
+                  <Database size={9} className="text-amber-400/25" />
+                  <span>
+                    Persona data from{" "}
+                    <a
+                      href="https://huggingface.co/datasets/nvidia/Nemotron-Personas-USA"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-amber-400/35 hover:text-amber-400/60 transition-colors underline"
+                    >
+                      NVIDIA Nemotron-Personas-USA
+                    </a>
+                    {" "}• Response simulated by LLM
+                  </span>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}

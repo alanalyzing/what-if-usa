@@ -23,3 +23,20 @@
 - [x] Add loading states showing "Thinking..." → "Drafting responses..." → "Delivering results"
 - [x] Write vitest tests for the LLM endpoint (9 tests passing)
 - [x] End-to-end testing of real-time response generation
+- [x] Implement progressive wave-based batch delivery (first 10, then 20, then rest)
+- [x] Update backend to accept wave-sized persona batches
+- [x] Update frontend AppContext to send multiple sequential API calls per wave
+- [x] Show wave progress indicator in ResultsPanel (e.g., "Wave 1/3 — 10 of 50 respondents")
+- [x] Stream results into UI after each wave completes (not waiting for all waves)
+- [x] Update vitest tests for wave-based generation
+- [x] Upgrade map to 3D with terrain, hillshading, and texture
+- [x] Add pitch/bearing for 3D perspective view
+- [x] Add terrain source with exaggeration for elevation
+- [x] Add hillshade layer for depth and shadow effects
+- [x] Add data source annotations (NVIDIA Nemotron badge) on persona cards and results
+- [x] Add trust indicator showing dataset provenance on StatusBar
+- [x] Build demographic breakdown charts (age distribution histogram)
+- [x] Build occupation distribution pie/donut chart
+- [x] Build education level bar chart
+- [x] Build geographic spread chart showing state distribution of respondents
+- [x] Add charts section to ResultsPanel with tabbed navigation

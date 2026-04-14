@@ -1,7 +1,7 @@
 /**
  * Server-side simulation engine
  * Generates real-time contextual persona responses using the Forge LLM API
- * Processes personas in parallel batches for efficiency
+ * Supports wave-based batch processing: processes personas in escalating waves
  */
 
 import { invokeLLM } from "./_core/llm";
@@ -50,7 +50,7 @@ Respond with a JSON array. Each element must have exactly these fields:
 Return ONLY the JSON array, no other text.`;
 }
 
-function parseBatchResponse(raw: string, personaIds: string[]): PersonaResult[] {
+export function parseBatchResponse(raw: string, personaIds: string[]): PersonaResult[] {
   try {
     // Try to extract JSON array from the response
     let jsonStr = raw.trim();
@@ -69,9 +69,12 @@ function parseBatchResponse(raw: string, personaIds: string[]): PersonaResult[] 
     }
 
     const parsed = JSON.parse(jsonStr);
-    if (!Array.isArray(parsed)) throw new Error("Not an array");
+    
+    // Handle both array and object-wrapped responses
+    const items = Array.isArray(parsed) ? parsed : (parsed.results || parsed.responses || []);
+    if (!Array.isArray(items)) throw new Error("Not an array");
 
-    return parsed.map((item: any) => {
+    return items.map((item: any) => {
       const sentiment: Sentiment =
         item.sentiment === "positive" || item.sentiment === "neutral" || item.sentiment === "negative"
           ? item.sentiment
@@ -93,54 +96,86 @@ function parseBatchResponse(raw: string, personaIds: string[]): PersonaResult[] 
   }
 }
 
-export async function generateBatchResponses(
+/**
+ * Process a single batch of personas through the LLM
+ */
+async function processBatch(question: string, batch: SimulationPersona[]): Promise<PersonaResult[]> {
+  const prompt = buildBatchPrompt(question, batch);
+  const personaIds = batch.map((p) => p.id);
+
+  try {
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a survey simulation engine. You generate realistic, diverse responses from the perspective of different American personas. Always respond with valid JSON arrays only. No markdown, no explanation — just the JSON array.",
+        },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const content = typeof response.choices[0]?.message?.content === "string"
+      ? response.choices[0].message.content
+      : JSON.stringify(response.choices[0]?.message?.content);
+
+    return parseBatchResponse(content, personaIds);
+  } catch (err) {
+    console.error("[Simulation] LLM batch failed:", err);
+    return personaIds.map((id) => ({
+      personaId: id,
+      answer: "I appreciate the question but would need to reflect on it more before sharing my thoughts.",
+      sentiment: "neutral" as Sentiment,
+    }));
+  }
+}
+
+/**
+ * Compute wave sizes for progressive delivery.
+ * Uses absolute step sizes: first 10, then 20, then the rest.
+ * For small samples (≤10), returns a single wave.
+ */
+export function computeWaves(total: number): number[] {
+  if (total <= 10) return [total]; // Single wave for small samples
+  
+  // Wave 1: always 10
+  const wave1 = 10;
+  const remaining1 = total - wave1;
+  
+  if (remaining1 <= 0) return [total];
+  
+  // Wave 2: 20 or whatever remains if less than 20
+  const wave2 = Math.min(20, remaining1);
+  const remaining2 = remaining1 - wave2;
+  
+  if (remaining2 <= 0) return [wave1, wave2];
+  
+  // Wave 3: the rest
+  return [wave1, wave2, remaining2];
+}
+
+/**
+ * Generate responses for a single wave of personas.
+ * Processes the wave's personas in parallel sub-batches of BATCH_SIZE.
+ */
+export async function generateWaveResponses(
   question: string,
   personas: SimulationPersona[],
 ): Promise<PersonaResult[]> {
-  // Split personas into batches
+  // Split into sub-batches of BATCH_SIZE
   const batches: SimulationPersona[][] = [];
   for (let i = 0; i < personas.length; i += BATCH_SIZE) {
     batches.push(personas.slice(i, i + BATCH_SIZE));
   }
 
-  // Process batches in parallel (up to 4 concurrent)
+  // Process sub-batches in parallel (up to 4 concurrent)
   const CONCURRENCY = 4;
   const allResults: PersonaResult[] = [];
 
   for (let i = 0; i < batches.length; i += CONCURRENCY) {
     const concurrentBatches = batches.slice(i, i + CONCURRENCY);
-    const batchPromises = concurrentBatches.map(async (batch) => {
-      const prompt = buildBatchPrompt(question, batch);
-      const personaIds = batch.map((p) => p.id);
-
-      try {
-        const response = await invokeLLM({
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a survey simulation engine. You generate realistic, diverse responses from the perspective of different American personas. Always respond with valid JSON arrays only. No markdown, no explanation — just the JSON array.",
-            },
-            { role: "user", content: prompt },
-          ],
-          response_format: { type: "json_object" },
-        });
-
-        const content = typeof response.choices[0]?.message?.content === "string"
-          ? response.choices[0].message.content
-          : JSON.stringify(response.choices[0]?.message?.content);
-
-        return parseBatchResponse(content, personaIds);
-      } catch (err) {
-        console.error("[Simulation] LLM batch failed:", err);
-        return personaIds.map((id) => ({
-          personaId: id,
-          answer: "I appreciate the question but would need to reflect on it more before sharing my thoughts.",
-          sentiment: "neutral" as Sentiment,
-        }));
-      }
-    });
-
+    const batchPromises = concurrentBatches.map((batch) => processBatch(question, batch));
     const batchResults = await Promise.all(batchPromises);
     for (const results of batchResults) {
       allResults.push(...results);
@@ -148,4 +183,14 @@ export async function generateBatchResponses(
   }
 
   return allResults;
+}
+
+/**
+ * Legacy single-shot generation for backward compatibility
+ */
+export async function generateBatchResponses(
+  question: string,
+  personas: SimulationPersona[],
+): Promise<PersonaResult[]> {
+  return generateWaveResponses(question, personas);
 }

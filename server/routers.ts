@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { generateBatchResponses } from "./simulation";
+import { generateWaveResponses, computeWaves } from "./simulation";
 
 const personaSchema = z.object({
   id: z.string(),
@@ -34,6 +34,44 @@ export const appRouter = router({
   }),
 
   simulation: router({
+    /**
+     * Generate responses for a single wave of personas.
+     * The frontend calls this multiple times with different persona subsets
+     * to implement progressive wave delivery (e.g., first 10, then 20, then rest).
+     */
+    generateWave: publicProcedure
+      .input(
+        z.object({
+          question: z.string().min(1).max(500),
+          personas: z.array(personaSchema).min(1).max(100),
+          waveIndex: z.number().int().min(0),
+          totalWaves: z.number().int().min(1),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const results = await generateWaveResponses(input.question, input.personas);
+        return {
+          results,
+          waveIndex: input.waveIndex,
+          totalWaves: input.totalWaves,
+          personaCount: input.personas.length,
+        };
+      }),
+
+    /**
+     * Compute wave plan for a given total persona count.
+     * Returns the wave sizes so the frontend knows how to split the personas.
+     */
+    planWaves: publicProcedure
+      .input(z.object({ totalPersonas: z.number().int().min(1).max(100) }))
+      .query(({ input }) => {
+        const waves = computeWaves(input.totalPersonas);
+        return { waves, totalWaves: waves.length };
+      }),
+
+    /**
+     * Legacy single-shot generation (backward compatible)
+     */
     generate: publicProcedure
       .input(
         z.object({
@@ -42,7 +80,7 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ input }) => {
-        const results = await generateBatchResponses(input.question, input.personas);
+        const results = await generateWaveResponses(input.question, input.personas);
         return { results };
       }),
   }),
